@@ -45,7 +45,7 @@ def choose_device(preferred: str = "cuda") -> str:
 # -----------------------------------------------------
 
 INPUT_IMAGE = "example_input.jpg"                     # upload this to RunPod
-OUTPUT_VIDEO = "output.mp4"                  # video will be saved here
+OUTPUT_VIDEO = "outputs/output.mp4"                  # video will be saved here
 MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
 
 TARGET_SIZE = (576, 1024)                    # SVD-friendly resolution
