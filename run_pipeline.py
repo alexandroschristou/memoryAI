@@ -21,7 +21,7 @@ import os
 # CONFIGURATION (edit these for quick experiments)
 # -----------------------------------------------------
 
-INPUT_IMAGE = "input.jpg"                     # upload this to RunPod
+INPUT_IMAGE = "example_input.jpg"                     # upload this to RunPod
 OUTPUT_VIDEO = "output.mp4"                  # video will be saved here
 MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
 
