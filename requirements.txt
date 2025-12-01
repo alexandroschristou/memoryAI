@@ -1,0 +1,10 @@
+torch                # Use the version recommended by RunPod image / CUDA
+torchvision
+diffusers[torch]
+transformers
+accelerate
+safetensors
+Pillow
+imageio
+imageio-ffmpeg
+pyyaml
