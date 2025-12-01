@@ -49,10 +49,10 @@ OUTPUT_VIDEO = "outputs/output.mp4"                  # video will be saved here
 MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
 
 TARGET_SIZE = (1024, 576)          # use the canonical SVD size
-NUM_FRAMES = 12                    # slightly shorter clip
-FPS = 7
+NUM_FRAMES = 24                    # slightly shorter clip
+FPS = 8
 # subtle, slow movement
-MOTION_BUCKET_ID = 20              # very subtle motion
+MOTION_BUCKET_ID = 40              # very subtle motion
 NOISE_AUG_STRENGTH = 0.005         # almost no noise
 SEED = 42
 
@@ -122,7 +122,7 @@ def generate_frames(pipe, image):
 
     result = pipe(
         image,
-        decode_chunk_size=4,  # smaller chunk => slightly more stable
+        decode_chunk_size=6,  # smaller chunk => slightly more stable
         num_frames=NUM_FRAMES,
         fps=FPS,
         motion_bucket_id=MOTION_BUCKET_ID,
