@@ -1,0 +1,162 @@
+"""
+A minimal, self-contained script to run the entire image → video pipeline
+with Stable Video Diffusion on RunPod.
+
+Why this script exists:
+- You asked for the simplest possible entrypoint.
+- No command-line arguments.
+- No complex structure.
+- Just edit the variables below, run "python run_pipeline.py", get your video.
+"""
+
+import torch
+from diffusers import StableVideoDiffusionPipeline
+from PIL import Image
+import imageio
+import numpy as np
+import os
+
+
+# -----------------------------------------------------
+# CONFIGURATION (edit these for quick experiments)
+# -----------------------------------------------------
+
+INPUT_IMAGE = "input.jpg"                     # upload this to RunPod
+OUTPUT_VIDEO = "output.mp4"                  # video will be saved here
+MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
+
+TARGET_SIZE = (576, 1024)                    # SVD-friendly resolution
+NUM_FRAMES = 14                              # short clip
+FPS = 7                                      # subtle, slow movement
+MOTION_BUCKET_ID = 70                        # 40–90 = subtle → medium motion
+NOISE_AUG_STRENGTH = 0.02                    # identity preservation
+SEED = 42                                    # reproducible results
+DEVICE = "cuda"                              # RunPod GPU
+
+
+
+# -----------------------------------------------------
+# STEP 1 — Load Model
+# -----------------------------------------------------
+
+def load_model():
+    """
+    Loads the Stable Video Diffusion model in float16 on GPU.
+    Why float16:
+    - Saves VRAM
+    - Faster inference
+    """
+    print("Loading model...")
+    pipe = StableVideoDiffusionPipeline.from_pretrained(
+        MODEL_ID,
+        torch_dtype=torch.float16
+    ).to(DEVICE)
+
+    # Optional: offload some layers to CPU if needed
+    # pipe.enable_model_cpu_offload()
+
+    return pipe
+
+
+
+# -----------------------------------------------------
+# STEP 2 — Load + Preprocess Image
+# -----------------------------------------------------
+
+def load_image(path):
+    """
+    Loads and resizes the input image.
+
+    Why simple resize:
+    - For MVP simplicity
+    - Later we can add face/body-aware cropping or padding
+    """
+    print("Loading and preprocessing image...")
+    image = Image.open(path).convert("RGB")
+    image = image.resize(TARGET_SIZE, Image.BICUBIC)
+    return image
+
+
+
+# -----------------------------------------------------
+# STEP 3 — Generate Frames
+# -----------------------------------------------------
+
+def generate_frames(pipe, image):
+    """
+    Runs diffusion model to create frames.
+
+    Why these parameters:
+    - NUM_FRAMES: keeps output short and GPU cost low
+    - MOTION_BUCKET_ID: controls movement intensity
+    - NOISE_AUG_STRENGTH: keeps identity stable
+    """
+    print("Generating frames...")
+
+    generator = torch.manual_seed(SEED)
+
+    result = pipe(
+        image,
+        decode_chunk_size=8,
+        num_frames=NUM_FRAMES,
+        fps=FPS,
+        motion_bucket_id=MOTION_BUCKET_ID,
+        noise_aug_strength=NOISE_AUG_STRENGTH,
+        generator=generator
+    )
+
+    frames = result.frames
+
+    # Handle different diffusers versions
+    if isinstance(frames, list):
+        pil_frames = frames[0]
+        frames_np = np.stack([np.array(f) for f in pil_frames])
+    else:
+        if isinstance(frames, torch.Tensor):
+            frames_np = frames.cpu().numpy()[0]
+        else:
+            frames_np = np.array(frames)[0]
+
+    return frames_np
+
+
+
+# -----------------------------------------------------
+# STEP 4 — Save as Video
+# -----------------------------------------------------
+
+def save_video(frames):
+    """
+    Saves frames to MP4 using imageio.
+    """
+    print("Saving video...")
+
+    os.makedirs(os.path.dirname(OUTPUT_VIDEO), exist_ok=True)
+
+    frames_uint8 = frames.astype(np.uint8)
+
+    imageio.mimsave(
+        OUTPUT_VIDEO,
+        frames_uint8,
+        fps=FPS,
+        quality=8
+    )
+
+    print(f"Video saved at: {OUTPUT_VIDEO}")
+
+
+
+# -----------------------------------------------------
+# MAIN PIPELINE
+# -----------------------------------------------------
+
+def main():
+    pipe = load_model()
+    image = load_image(INPUT_IMAGE)
+    frames = generate_frames(pipe, image)
+    save_video(frames)
+
+
+
+if __name__ == "__main__":
+    main()
