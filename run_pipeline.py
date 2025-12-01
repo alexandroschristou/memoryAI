@@ -16,6 +16,29 @@ import imageio
 import numpy as np
 import os
 
+def choose_device(preferred: str = "cuda") -> str:
+    """
+    Decide which device to use.
+
+    Why:
+    - Hardcoding 'cuda' makes the script brittle and leads to confusing
+      errors when CUDA isn't actually usable.
+    - Here we detect availability and fall back to CPU if needed, with
+      a clear message so you know what's going on.
+    """
+    if preferred == "cuda":
+        if torch.cuda.is_available():
+            # We can refine this later (e.g. select specific GPU index),
+            # but 'cuda' (device 0) is fine for a single-GPU RunPod.
+            print("[Device] Using CUDA GPU")
+            return "cuda"
+        else:
+            print("[Device] WARNING: CUDA requested but not available. Falling back to CPU.")
+            return "cpu"
+    else:
+        # If you ever call choose_device('cpu'), just return cpu directly.
+        print("[Device] Using CPU (explicitly requested)")
+        return "cpu"
 
 # -----------------------------------------------------
 # CONFIGURATION (edit these for quick experiments)
@@ -30,8 +53,8 @@ NUM_FRAMES = 14                              # short clip
 FPS = 7                                      # subtle, slow movement
 MOTION_BUCKET_ID = 70                        # 40–90 = subtle → medium motion
 NOISE_AUG_STRENGTH = 0.02                    # identity preservation
-SEED = 42                                    # reproducible results
-DEVICE = "cuda"                              # RunPod GPU
+SEED = 42
+DEVICE = choose_device()  # will be "cuda" or "cpu" depending on environment# RunPod GPU
 
 
 
