@@ -57,6 +57,14 @@ MOTION_BUCKET_ID = 20         # very subtle motion
 NOISE_AUG_STRENGTH = 0.005    # almost no noise
 SEED = 42
 
+# NUM_FRAMES = 20
+# FPS = 10
+# MOTION_BUCKET_ID = 35
+# NOISE_AUG_STRENGTH = 0.01
+#
+# num_inference_steps = 14
+# alpha = 0.75
+
 DEVICE = choose_device()  # will be "cuda" or "cpu" depending on environment# RunPod GPU
 
 
