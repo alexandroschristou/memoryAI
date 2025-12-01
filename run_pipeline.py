@@ -218,7 +218,7 @@ def main():
     frames = generate_frames(pipe, image)
 
     # Blend generated frames with the original
-    frames = blend_with_original(frames, original_np, alpha=0.65)
+    # frames = blend_with_original(frames, original_np, alpha=0.65)
 
     save_video(frames)
 
