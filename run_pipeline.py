@@ -48,12 +48,14 @@ INPUT_IMAGE = "example_input.jpg"                     # upload this to RunPod
 OUTPUT_VIDEO = "outputs/output.mp4"                  # video will be saved here
 MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
 
-TARGET_SIZE = (576, 1024)                    # SVD-friendly resolution
-NUM_FRAMES = 14                              # short clip
-FPS = 7                                      # subtle, slow movement
-MOTION_BUCKET_ID = 70                        # 40–90 = subtle → medium motion
-NOISE_AUG_STRENGTH = 0.02                    # identity preservation
+TARGET_SIZE = (1024, 576)          # use the canonical SVD size
+NUM_FRAMES = 12                    # slightly shorter clip
+FPS = 7
+# subtle, slow movement
+MOTION_BUCKET_ID = 20              # very subtle motion
+NOISE_AUG_STRENGTH = 0.005         # almost no noise
 SEED = 42
+
 DEVICE = choose_device()  # will be "cuda" or "cpu" depending on environment# RunPod GPU
 
 
@@ -120,12 +122,15 @@ def generate_frames(pipe, image):
 
     result = pipe(
         image,
-        decode_chunk_size=8,
+        decode_chunk_size=4,  # smaller chunk => slightly more stable
         num_frames=NUM_FRAMES,
         fps=FPS,
         motion_bucket_id=MOTION_BUCKET_ID,
         noise_aug_strength=NOISE_AUG_STRENGTH,
-        generator=generator
+        num_inference_steps=12,  # not too high, avoids over-baking details
+        min_guidance_scale=1.0,  # keep guidance low so model doesn't overcook
+        max_guidance_scale=1.5,
+        generator=generator,
     )
 
     frames = result.frames
@@ -142,7 +147,34 @@ def generate_frames(pipe, image):
 
     return frames_np
 
+def blend_with_original(frames: np.ndarray, original_np: np.ndarray, alpha: float = 0.65) -> np.ndarray:
+    """
+    Blend every generated frame with the original image to reduce deformation.
 
+    Why:
+    - The diffusion model tends to "repaint" details each frame, which creates
+      obvious AI artifacts, especially on faces and hands.
+    - By linearly mixing each frame with the original photo, we:
+        * keep identity and clothing very close to the original
+        * allow only subtle motion to remain
+        * make the result feel more like a living photograph instead of a hallucination.
+    """
+    # frames: (T, H, W, C)
+    # original_np: (H, W, C)
+    print("Blending generated frames with original image...")
+
+    # Ensure float32 for safe blending
+    frames_f = frames.astype(np.float32)
+    # Broadcast original over time dimension
+    original_broadcast = np.broadcast_to(original_np, frames_f.shape)
+
+    # Linear blend
+    blended = alpha * frames_f + (1.0 - alpha) * original_broadcast
+
+    # Clip and cast back to uint8
+    blended = np.clip(blended, 0, 255).astype(np.uint8)
+
+    return blended
 
 # -----------------------------------------------------
 # STEP 4 — Save as Video
@@ -154,7 +186,9 @@ def save_video(frames):
     """
     print("Saving video...")
 
-    os.makedirs(os.path.dirname(OUTPUT_VIDEO), exist_ok=True)
+    output_dir = os.path.dirname(OUTPUT_VIDEO)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     frames_uint8 = frames.astype(np.uint8)
 
@@ -169,6 +203,7 @@ def save_video(frames):
 
 
 
+
 # -----------------------------------------------------
 # MAIN PIPELINE
 # -----------------------------------------------------
@@ -176,7 +211,15 @@ def save_video(frames):
 def main():
     pipe = load_model()
     image = load_image(INPUT_IMAGE)
+
+    # Keep original as numpy for later blending
+    original_np = np.array(image).astype(np.float32)
+
     frames = generate_frames(pipe, image)
+
+    # Blend generated frames with the original
+    frames = blend_with_original(frames, original_np, alpha=0.65)
+
     save_video(frames)
 
 
