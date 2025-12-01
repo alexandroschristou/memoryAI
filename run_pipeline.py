@@ -52,8 +52,8 @@ TARGET_SIZE = (1024, 576)          # use the canonical SVD size
 NUM_FRAMES = 40                    # slightly shorter clip
 FPS = 10
 # subtle, slow movement
-MOTION_BUCKET_ID = 40              # very subtle motion
-NOISE_AUG_STRENGTH = 0.005         # almost no noise
+MOTION_BUCKET_ID = 60              # very subtle motion
+NOISE_AUG_STRENGTH = 0.010         # almost no noise
 SEED = 42
 
 DEVICE = choose_device()  # will be "cuda" or "cpu" depending on environment# RunPod GPU
@@ -122,14 +122,14 @@ def generate_frames(pipe, image):
 
     result = pipe(
         image,
-        decode_chunk_size=10,  # smaller chunk => slightly more stable
+        decode_chunk_size=6,  # smaller chunk => slightly more stable
         num_frames=NUM_FRAMES,
         fps=FPS,
         motion_bucket_id=MOTION_BUCKET_ID,
         noise_aug_strength=NOISE_AUG_STRENGTH,
-        num_inference_steps=4,  # not too high, avoids over-baking details
-        min_guidance_scale=1.5,  # keep guidance low so model doesn't overcook
-        max_guidance_scale=2.5,
+        num_inference_steps=2,  # not too high, avoids over-baking details
+        min_guidance_scale=0.5,  # keep guidance low so model doesn't overcook
+        max_guidance_scale=1.5,
         generator=generator,
     )
 
