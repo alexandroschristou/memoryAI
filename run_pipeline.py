@@ -48,12 +48,13 @@ INPUT_IMAGE = "example_input.jpg"                     # upload this to RunPod
 OUTPUT_VIDEO = "outputs/output.mp4"                  # video will be saved here
 MODEL_ID = "stabilityai/stable-video-diffusion-img2vid-xt"
 
-TARGET_SIZE = (1024, 576)          # use the canonical SVD size
-NUM_FRAMES = 40                    # slightly shorter clip
-FPS = 10
+
+TARGET_SIZE = (1024, 576)     # keep as you have
+NUM_FRAMES = 16               # short but not tiny
+FPS = 8
 # subtle, slow movement
-MOTION_BUCKET_ID = 60              # very subtle motion
-NOISE_AUG_STRENGTH = 0.010         # almost no noise
+MOTION_BUCKET_ID = 20         # very subtle motion
+NOISE_AUG_STRENGTH = 0.005    # almost no noise
 SEED = 42
 
 DEVICE = choose_device()  # will be "cuda" or "cpu" depending on environment# RunPod GPU
