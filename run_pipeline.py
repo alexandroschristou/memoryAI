@@ -128,7 +128,7 @@ def generate_frames(pipe, image):
         fps=FPS,
         motion_bucket_id=MOTION_BUCKET_ID,
         noise_aug_strength=NOISE_AUG_STRENGTH,
-        num_inference_steps=2,  # not too high, avoids over-baking details
+        num_inference_steps=12,  # not too high, avoids over-baking details
         min_guidance_scale=0.5,  # keep guidance low so model doesn't overcook
         max_guidance_scale=1.5,
         generator=generator,
