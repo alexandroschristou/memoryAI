@@ -11,6 +11,10 @@ import os
 import logging
 import sys
 from diffusers import StableDiffusionPipeline  # Replace with I2V-specific wrapper if available
+
+# Adjust the path to point to the parent directory of the 'wan' folder
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../Wan2.2")))
+
 from wan2 import WanI2VPipeline
 
 # -------------------------------
