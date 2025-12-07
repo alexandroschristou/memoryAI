@@ -47,8 +47,9 @@ logger.info(f"Image resized to {MODEL_RESOLUTION}")
 # -------------------------------
 logger.info("Loading Wan2.2-I2V-A14B model...")
 pipe = StableDiffusionPipeline.from_pretrained(
-    "Wan2.2-I2V-A14B",
-    torch_dtype=torch.float16
+    "./Wan2.2-I2V-A14B",
+    torch_dtype=torch.float16,
+    local_files_only=True
 )
 pipe = pipe.to(DEVICE)
 logger.info("Model loaded successfully")
