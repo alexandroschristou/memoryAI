@@ -1,62 +1,65 @@
 """
 Simple Image-to-Video Animation Pipeline using Wan2.2-I2V-A14B
-
-This script:
-1. Loads a single image.
-2. Defines a text prompt for motion/scene description.
-3. Uses Wan2.2-I2V-A14B to generate a short animated video.
-4. Saves the video as MP4 using FFmpeg.
-
-Requirements:
-- Python 3.10+
-- torch, torchvision
-- diffusers
-- PIL
-- numpy
-- ffmpeg installed and in PATH
+With verbose logging for better traceability.
 """
 
 import torch
 from PIL import Image
 import numpy as np
 import subprocess
+import os
+import logging
 from diffusers import StableDiffusionPipeline  # Replace with I2V-specific wrapper if available
 
 # -------------------------------
-# 1. Config / Inputs
+# 1. Logging setup
 # -------------------------------
-IMAGE_PATH = "../../example_input.jpg"       # Your source image
+logging.basicConfig(
+    level=logging.INFO,  # INFO level will print progress messages
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+logger = logging.getLogger(__name__)
+
+# -------------------------------
+# 2. Config / Inputs
+# -------------------------------
+IMAGE_PATH = "input_image.png"       # Your source image
 PROMPT = "A realistic cinematic portrait of a person waving in slow motion, sunny day, natural lighting"
 OUTPUT_VIDEO = "output.mp4"
-VIDEO_FPS = 12                        # Frame rate
-VIDEO_FRAMES = 30                      # Number of frames
+VIDEO_FPS = 12
+VIDEO_FRAMES = 30
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# -------------------------------
-# 2. Load the input image
-# -------------------------------
-image = Image.open(IMAGE_PATH).convert("RGB")
-# Resize to the model's expected resolution if needed
 MODEL_RESOLUTION = (512, 512)
-image = image.resize(MODEL_RESOLUTION)
+
+logger.info(f"Device set to: {DEVICE}")
 
 # -------------------------------
-# 3. Load Wan2.2-I2V-A14B model
+# 3. Load input image
 # -------------------------------
-# NOTE: replace 'Wan2.2-I2V-A14B' with actual model repo on HuggingFace
-# This example assumes a standard diffusers-like API
+logger.info(f"Loading input image from {IMAGE_PATH}")
+image = Image.open(IMAGE_PATH).convert("RGB")
+image = image.resize(MODEL_RESOLUTION)
+logger.info(f"Image resized to {MODEL_RESOLUTION}")
+
+# -------------------------------
+# 4. Load Wan2.2-I2V-A14B model
+# -------------------------------
+logger.info("Loading Wan2.2-I2V-A14B model...")
 pipe = StableDiffusionPipeline.from_pretrained(
     "Wan2.2-I2V-A14B",
-    torch_dtype=torch.float16  # use half precision for speed/memory
+    torch_dtype=torch.float16
 )
 pipe = pipe.to(DEVICE)
+logger.info("Model loaded successfully")
 
 # -------------------------------
-# 4. Generate video frames
+# 5. Generate video frames
 # -------------------------------
 frames = []
+logger.info(f"Generating {VIDEO_FRAMES} frames for the video...")
 for frame_idx in range(VIDEO_FRAMES):
-    # Optional: add slight variation per frame using seed or latent noise
+    logger.info(f"Generating frame {frame_idx + 1}/{VIDEO_FRAMES}")
     generator = torch.Generator(device=DEVICE).manual_seed(frame_idx)
 
     # Generate one frame from image + prompt
@@ -64,9 +67,13 @@ for frame_idx in range(VIDEO_FRAMES):
     frame = np.array(output.images[0])
     frames.append(frame)
 
+logger.info("All frames generated successfully")
+
 # -------------------------------
-# 5. Save frames as video using FFmpeg
+# 6. Save frames as video using FFmpeg
 # -------------------------------
+logger.info("Saving frames as video...")
+
 # Save frames temporarily as PNG
 tmp_frame_files = []
 for idx, frame in enumerate(frames):
@@ -74,10 +81,9 @@ for idx, frame in enumerate(frames):
     Image.fromarray(frame).save(tmp_file)
     tmp_frame_files.append(tmp_file)
 
-# Build FFmpeg command
 ffmpeg_cmd = [
     "ffmpeg",
-    "-y",  # overwrite output if exists
+    "-y",
     "-framerate", str(VIDEO_FPS),
     "-i", "frame_%04d.png",
     "-c:v", "libx264",
@@ -85,11 +91,13 @@ ffmpeg_cmd = [
     OUTPUT_VIDEO
 ]
 
+logger.info("Running FFmpeg to encode video...")
 subprocess.run(ffmpeg_cmd, check=True)
+logger.info(f"Video saved to {OUTPUT_VIDEO}")
 
-# Cleanup temporary frames (optional)
-import os
+# Cleanup temporary frames
+logger.info("Cleaning up temporary frame files...")
 for tmp_file in tmp_frame_files:
     os.remove(tmp_file)
 
-print(f"Video saved to {OUTPUT_VIDEO}")
+logger.info("Pipeline completed successfully!")
