@@ -31,6 +31,8 @@ VIDEO_FPS = 12
 VIDEO_FRAMES = 30
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_RESOLUTION = (512, 512)
+# Path to your local model folder
+LOCAL_MODEL_PATH = "../../model/Wan2.2-I2V-A14B"
 
 logger.info(f"Device set to: {DEVICE}")
 
@@ -47,7 +49,7 @@ logger.info(f"Image resized to {MODEL_RESOLUTION}")
 # -------------------------------
 logger.info("Loading Wan2.2-I2V-A14B model...")
 pipe = StableDiffusionPipeline.from_pretrained(
-    "./Wan2.2-I2V-A14B",
+    LOCAL_MODEL_PATH,
     torch_dtype=torch.float16,
     local_files_only=True
 )
