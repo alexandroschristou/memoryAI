@@ -9,7 +9,9 @@ import numpy as np
 import subprocess
 import os
 import logging
+import sys
 from diffusers import StableDiffusionPipeline  # Replace with I2V-specific wrapper if available
+from wan2 import WanI2VPipeline
 
 # -------------------------------
 # 1. Logging setup
@@ -36,21 +38,25 @@ MODEL_RESOLUTION = (512, 512)
 # Path to your local model folder
 LOCAL_MODEL_PATH = "../../models/Wan2.2-I2V-A14B"
 
-logger.info(f"Device set to: {DEVICE}")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
-# -------------------------------
-# 3. Load input image
-# -------------------------------
-logger.info(f"Loading input image from {IMAGE_PATH}")
-image = Image.open(IMAGE_PATH).convert("RGB")
-image = image.resize(MODEL_RESOLUTION)
-logger.info(f"Image resized to {MODEL_RESOLUTION}")
+# Clear previous handlers
+logger.handlers = []
+
+# Add stdout handler with flushing
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+logger.propagate = False  # avoid duplicate logs
 
 # -------------------------------
 # 4. Load Wan2.2-I2V-A14B model
 # -------------------------------
 logger.info("Loading Wan2.2-I2V-A14B model...")
-pipe = StableDiffusionPipeline.from_pretrained(
+pipe = WanI2VPipeline.from_pretrained(
     LOCAL_MODEL_PATH,
     torch_dtype=torch.float16,
     local_files_only=True
