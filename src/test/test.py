@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # -------------------------------
 # 2. Config / Inputs
 # -------------------------------
-IMAGE_PATH = "input_image.png"       # Your source image
+IMAGE_PATH = "../../example_input.jpg"       # Your source image
 PROMPT = "A realistic cinematic portrait of a person waving in slow motion, sunny day, natural lighting"
 OUTPUT_VIDEO = "output.mp4"
 VIDEO_FPS = 12
