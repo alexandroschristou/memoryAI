@@ -14,10 +14,12 @@ from diffusers import StableDiffusionPipeline  # Replace with I2V-specific wrapp
 # -------------------------------
 # 1. Logging setup
 # -------------------------------
+
 logging.basicConfig(
-    level=logging.INFO,  # INFO level will print progress messages
+    level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S"
+    datefmt="%H:%M:%S",
+    force=True  # ensures existing loggers are reconfigured
 )
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ VIDEO_FRAMES = 30
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_RESOLUTION = (512, 512)
 # Path to your local model folder
-LOCAL_MODEL_PATH = "../../model/Wan2.2-I2V-A14B"
+LOCAL_MODEL_PATH = "../../models/Wan2.2-I2V-A14B"
 
 logger.info(f"Device set to: {DEVICE}")
 
