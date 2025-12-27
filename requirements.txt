@@ -1,9 +1,0 @@
-diffusers
-transformers
-accelerate
-safetensors
-Pillow
-imageio
-imageio-ffmpeg
-pyyaml
-hf_transfer
