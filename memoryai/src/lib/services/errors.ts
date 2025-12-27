@@ -1,0 +1,7 @@
+export type GenerationErrorCode =
+  | "INVALID_INPUT"
+  | "PROVIDER_CREATE_FAILED"
+  | "PROVIDER_TIMEOUT"
+  | "PROVIDER_FAILED"
+  | "DOWNLOAD_FAILED"
+  | "UNKNOWN_ERROR";

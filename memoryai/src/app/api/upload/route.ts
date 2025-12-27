@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import path from "node:path";
-import fs from "node:fs/promises";
 import crypto from "node:crypto";
+import { memoryUploadRepo } from "@/lib/adapters/memoryUploadRepo";
+import { localStorage } from "@/lib/adapters/localStorage";
 
 export const runtime = "nodejs";
 
@@ -20,13 +20,21 @@ export async function POST(req: Request) {
   const buf = Buffer.from(await file.arrayBuffer());
   const id = crypto.randomUUID();
 
-  const uploadDir = path.join(process.cwd(), ".local", "uploads");
-  await fs.mkdir(uploadDir, { recursive: true });
-
   const ext = file.type === "image/png" ? "png" : "jpg";
-  const imagePath = path.join(uploadDir, `${id}.${ext}`);
 
-  await fs.writeFile(imagePath, buf);
+  const { imagePath } = await localStorage.saveUpload({
+    assetId: id,
+    bytes: buf,
+    ext,
+  });
 
-  return NextResponse.json({ assetId: id, imagePath });
+  memoryUploadRepo.create({
+    id,
+    imagePath,
+    contentType: file.type,
+    createdAt: Date.now(),
+  });
+
+  // ✅ IMPORTANT: return only assetId to the client (no server paths)
+  return NextResponse.json({ assetId: id });
 }

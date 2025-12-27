@@ -14,9 +14,12 @@ export type GenerationRecord = {
   createdAt: number;
   status: GenerationStatus;
 
+  assetId?: string;
   imagePath?: string;
   presetId: PresetId;
   durationSec: number;
+  dedupeKey: string;
+
 
   provider?: string;
   outputVideoPath?: string;

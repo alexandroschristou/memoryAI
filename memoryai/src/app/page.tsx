@@ -20,13 +20,13 @@ export default function HomePage() {
       fd.append("file", file);
       const upRes = await fetch("/api/upload", { method: "POST", body: fd });
       if (!upRes.ok) throw new Error(await upRes.text());
-      const { imagePath } = await upRes.json();
+      const { assetId  } = await upRes.json();
 
       // 2) create generation
       const genRes = await fetch("/api/generations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagePath, presetId }),
+        body: JSON.stringify({ assetId , presetId }),
       });
       if (!genRes.ok) throw new Error(await genRes.text());
       const { generationId } = await genRes.json();

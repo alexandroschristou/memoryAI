@@ -6,9 +6,10 @@ import { createGeneration } from "@/lib/services/generationService";
 export const runtime = "nodejs";
 
 type Body = {
-  imagePath: string;
+  assetId: string;
   presetId: PresetId;
 };
+
 
 export async function POST(req: Request) {
   const body = (await req.json()) as Body;

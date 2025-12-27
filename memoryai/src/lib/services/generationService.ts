@@ -1,44 +1,87 @@
 import crypto from "node:crypto";
+import type { Logger } from "@/lib/ports/logger";
+import type { GenerationErrorCode } from "./errors";
 import type { PresetId } from "@/lib/presets";
 import { getPreset } from "@/lib/presets";
 import type { GenerationRepository } from "@/lib/ports/generationRepo";
 import type { JobQueue } from "@/lib/ports/jobQueue";
 import type { VideoProviderFactory } from "@/lib/ports/videoProvider";
+import type { UploadRepository } from "@/lib/ports/uploadRepo";
+
 
 const MAX_DURATION = 5;
 
 export type CreateGenerationInput = {
-  imagePath: string;
+  assetId: string;
   presetId: PresetId;
-  // userId?: string; // add later without changing architecture
 };
+
 
 export type GenerationServiceDeps = {
   repo: GenerationRepository;
+  uploadRepo: UploadRepository;
   queue: JobQueue;
   providerFactory: VideoProviderFactory;
+  logger: Logger;
   now: () => number;
 };
+
+
+function makeDedupeKey(assetId: string, presetId: PresetId) {
+  return `${assetId}:${presetId}`;
+}
+
 export function createGeneration(deps: GenerationServiceDeps, input: CreateGenerationInput) {
+  deps.logger.info("GENERATION_CREATE_REQUESTED", {
+    presetId: input.presetId,
+    assetId: input.assetId,
+  });
+
+  const asset = deps.uploadRepo.get(input.assetId);
+  if (!asset) {
+    deps.logger.warn("UPLOAD_ASSET_NOT_FOUND", { assetId: input.assetId });
+    throw new Error("Unknown assetId");
+  }
+
+  const dedupeKey = makeDedupeKey(input.assetId, input.presetId);
+
+  const existing = deps.repo.findByDedupeKey(dedupeKey);
+  if (existing) {
+    deps.logger.info("GENERATION_DEDUPED", {
+      assetId: input.assetId,
+      presetId: input.presetId,
+      generationId: existing.id,
+      status: existing.status,
+    });
+
+    return { generationId: existing.id, deduped: true as const };
+  }
+
   const preset = getPreset(input.presetId);
   const durationSec = Math.min(preset.defaultDurationSec, MAX_DURATION);
-
-  const providerName = deps.providerFactory.get().name; // 결정 now, store for later
+  const providerName = deps.providerFactory.get().name;
 
   const id = crypto.randomUUID();
+
   deps.repo.create({
     id,
     createdAt: deps.now(),
     status: "queued",
-    imagePath: input.imagePath,
+    assetId: input.assetId,
+    imagePath: asset.imagePath,
     presetId: input.presetId,
     durationSec,
-    provider: providerName, // ✅ IMPORTANT
+    dedupeKey,               // ✅ required now
+    provider: providerName,
   });
 
+  deps.logger.info("GENERATION_QUEUED", { generationId: id, provider: providerName });
   deps.queue.enqueueGeneration(id);
-  return { generationId: id };
+
+  return { generationId: id, deduped: false as const };
 }
+
+
 
 
 export function getGeneration(deps: GenerationServiceDeps, id: string) {
@@ -49,51 +92,60 @@ export function getGeneration(deps: GenerationServiceDeps, id: string) {
  * Worker entrypoint: runs a single generation job.
  * Keeps orchestration in one place.
  */
-export async function runGeneration(deps: GenerationServiceDeps, generationId: string): Promise<void> {
+export async function runGeneration(
+  deps: GenerationServiceDeps,
+  generationId: string
+): Promise<void> {
   const gen = deps.repo.get(generationId);
   if (!gen) return;
 
-  // Don't rerun completed jobs
   if (gen.status === "succeeded" || gen.status === "failed") return;
 
-  if (!gen.imagePath) {
-    deps.repo.update(generationId, { status: "failed", error: "Missing imagePath" });
-    return;
-  }
-
-  // ✅ if provider isn't stored (older records), fall back to current env provider
-  const providerName = gen.provider;
+  deps.logger.info("GENERATION_STARTED", {
+    generationId,
+    provider: gen.provider,
+  });
 
   try {
     deps.repo.setStatus(generationId, "creating");
 
-    const provider = deps.providerFactory.get(providerName);
+    const provider = deps.providerFactory.get(gen.provider);
 
     deps.repo.setStatus(generationId, "running");
 
     const result = await provider.generate({
       generationId,
-      imagePath: gen.imagePath,
+      imagePath: gen.imagePath!,
       presetId: gen.presetId,
       durationSec: gen.durationSec,
     });
 
     deps.repo.setStatus(generationId, "downloading");
 
-    // For FakeProvider/your RunwayProvider, `generate()` already outputs a local mp4 path.
-    // Later when you introduce storage abstraction, this is where you'd upload to S3, etc.
-
     deps.repo.update(generationId, {
       status: "succeeded",
-      provider: result.provider,
       outputVideoPath: result.videoPath,
       error: undefined,
     });
-  } catch (e: any) {
+
+    deps.logger.info("GENERATION_SUCCEEDED", {
+      generationId,
+      provider: result.provider,
+    });
+  } catch (err: any) {
+    const errorCode: GenerationErrorCode = "PROVIDER_FAILED";
+
     deps.repo.update(generationId, {
       status: "failed",
-      error: e?.message ?? "Unknown error",
+      error: errorCode,
+    });
+
+    deps.logger.error("GENERATION_FAILED", {
+      generationId,
+      errorCode,
+      message: err?.message,
     });
   }
 }
+
 
